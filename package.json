@@ -1,0 +1,46 @@
+{
+  "name": "gettext-simple",
+  "version": "0.2.0",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Aylur/simple-gettext.git"
+  },
+  "scripts": {
+    "build": "tsc"
+  },
+  "dependencies": {
+    "gettext-parser": "^8.0.0",
+    "react": "^19.1.1"
+  },
+  "devDependencies": {
+    "@types/gettext-parser": "^8.0.0",
+    "@types/node": "^24.2.0",
+    "@types/react": "^19.1.9",
+    "typescript": "^5.9.2"
+  },
+  "bin": {
+    "gettext-simple": "dist/cli.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "import": "./dist/gettext.js",
+      "types": "./dist/gettext.d.ts"
+    },
+    "./react": {
+      "import": "./dist/react.js",
+      "types": "./dist/react.d.ts"
+    },
+    "./po2json": {
+      "import": "./dist/po2json.js",
+      "types": "./dist/po2json.d.ts"
+    }
+  },
+  "prettier": {
+    "semi": false
+  }
+}
