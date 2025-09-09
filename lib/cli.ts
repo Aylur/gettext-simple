@@ -3,7 +3,7 @@
 import * as fs from "node:fs/promises"
 import * as path from "node:path"
 import * as process from "node:process"
-import po2json from "./po2json"
+import po2json from "./po2json.js"
 
 const [, script, input, output] = process.argv
 
@@ -17,5 +17,8 @@ if (import.meta.url === `file://${path.resolve(script)}`) {
     } else {
       process.stdout.write(result)
     }
+  } else {
+    console.error("missing input argument")
+    process.exit(1)
   }
 }
