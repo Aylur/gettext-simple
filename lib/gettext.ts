@@ -1,10 +1,10 @@
 import type { Messages, PoJson } from "./po2json"
 
 export class Gettext {
-  public messages: Messages = {}
-
   #pluralFunc!: (n: number) => number
   #pluralForm!: string
+  #lang: string
+  #messages: Messages
 
   set pluralForm(value: string) {
     this.#pluralForm = value
@@ -19,12 +19,22 @@ export class Gettext {
     return this.#pluralForm
   }
 
+  get messages() {
+    return this.#messages
+  }
+
+  get lang() {
+    return this.#lang
+  }
+
   constructor({
     pluralForms = "nplurals=2; plural=(n != 1);",
+    lang = "en",
     messages = { "": {} },
   }: Partial<PoJson> = {}) {
+    this.#lang = lang
+    this.#messages = messages
     this.pluralForm = pluralForms
-    this.messages = messages
   }
 
   gettext = (msgid: string): string => {

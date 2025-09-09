@@ -1,7 +1,7 @@
 import { po, type GetTextTranslation } from "gettext-parser"
 
 export type Messages = { [ctx: string]: Record<string, string | string[]> }
-export type PoJson = { pluralForms: string; messages: Messages }
+export type PoJson = { pluralForms: string; lang: string; messages: Messages }
 
 const { fromEntries, entries } = Object
 
@@ -26,6 +26,7 @@ export default function po2json(content: string): PoJson {
 
   return {
     pluralForms,
+    lang: tr.headers["Language"],
     messages: {
       "": translate(defaultContextTranslations),
       ...fromEntries(

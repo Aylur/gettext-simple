@@ -1,20 +1,30 @@
 "use client"
 
-import { createContext, use, useState, type ReactNode } from "react"
+import {
+  createContext,
+  use,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react"
 import type { PoJson } from "./po2json"
 import { Gettext } from "./gettext"
 
+type Messages = Partial<PoJson>
+
 const GettextContext = createContext({
   gettext: new Gettext(),
-  setMessages: (messages: Partial<PoJson>) => void messages,
+  setMessages: (messages: Messages) => void messages,
 })
 
 export function GettextProvider(props: {
-  messages?: Partial<PoJson>
+  messages?: Messages
   children?: ReactNode
 }) {
   const [gettext, setGettext] = useState<Gettext>(new Gettext(props.messages))
-  const setMessages = (m: Partial<PoJson>) => void setGettext(new Gettext(m))
+  const setMessages = (m: Messages) => void setGettext(new Gettext(m))
+  useEffect(() => setMessages(props.messages ?? {}), [props.messages])
 
   return (
     <GettextContext value={{ gettext, setMessages }}>
@@ -26,10 +36,14 @@ export function GettextProvider(props: {
 export function useGettext() {
   const ctx = use(GettextContext)
 
-  return Object.assign(ctx.gettext.gettext, {
-    gettext: ctx.gettext.gettext,
-    pgettext: ctx.gettext.pgettext,
-    ngettext: ctx.gettext.ngettext,
-    setMessages: ctx.setMessages,
-  })
+  return useMemo(
+    () =>
+      Object.assign(ctx.gettext.gettext, {
+        gettext: ctx.gettext.gettext,
+        pgettext: ctx.gettext.pgettext,
+        ngettext: ctx.gettext.ngettext,
+        setMessages: ctx.setMessages,
+      }),
+    [ctx],
+  )
 }
