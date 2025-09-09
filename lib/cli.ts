@@ -5,20 +5,18 @@ import * as path from "node:path"
 import * as process from "node:process"
 import po2json from "./po2json.js"
 
-const [, script, input, output] = process.argv
+const [, , input, output] = process.argv
 
-if (import.meta.url === `file://${path.resolve(script)}`) {
-  if (input) {
-    const content = await fs.readFile(path.resolve(input), "utf-8")
-    const result = JSON.stringify(po2json(content))
+if (input) {
+  const content = await fs.readFile(path.resolve(input), "utf-8")
+  const result = JSON.stringify(po2json(content))
 
-    if (output) {
-      fs.writeFile(path.resolve(output), result)
-    } else {
-      process.stdout.write(result)
-    }
+  if (output) {
+    fs.writeFile(path.resolve(output), result)
   } else {
-    console.error("missing input argument")
-    process.exit(1)
+    process.stdout.write(result)
   }
+} else {
+  console.error("missing input argument")
+  process.exit(1)
 }
