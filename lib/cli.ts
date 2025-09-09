@@ -3,7 +3,7 @@
 import * as fs from "node:fs/promises"
 import * as path from "node:path"
 import * as process from "node:process"
-import po2json from "../lib/po2json"
+import po2json from "./po2json"
 
 const [, script, input, output] = process.argv
 
