@@ -6,15 +6,6 @@ export class Gettext {
   #lang: string
   #messages: Messages
 
-  set pluralForm(value: string) {
-    this.#pluralForm = value
-
-    this.#pluralFunc = Function(
-      "n",
-      "let plural, nplurals; " + value + " return Number(plural);",
-    ) as (n: number) => number
-  }
-
   get pluralForm() {
     return this.#pluralForm
   }
@@ -34,7 +25,12 @@ export class Gettext {
   }: Partial<PoJson> = {}) {
     this.#lang = lang
     this.#messages = messages
-    this.pluralForm = pluralForms
+    this.#pluralForm = pluralForms
+
+    this.#pluralFunc = Function(
+      "n",
+      "let plural, nplurals; " + pluralForms + " return Number(plural);",
+    ) as (n: number) => number
   }
 
   gettext = (msgid: string): string => {

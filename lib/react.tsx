@@ -9,7 +9,7 @@ import {
   type ReactNode,
 } from "react"
 import type { PoJson } from "./po2json"
-import { Gettext } from "./gettext"
+import { Gettext } from "./gettext.js"
 
 type Messages = Partial<PoJson>
 
