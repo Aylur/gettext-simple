@@ -1,5 +1,21 @@
 import type { Messages, PoJson } from "./po2json"
 
+type TemplateStrings<S extends string> =
+  S extends `${infer _Before}{{${infer K}}}${infer Rest}`
+    ? K | TemplateStrings<Rest>
+    : never
+
+export function fmt<T extends string>(
+  str: T,
+  values: Record<TemplateStrings<T>, string>,
+) {
+  let builder: string = str
+  for (const [key, value] of Object.entries(values)) {
+    builder = builder.replaceAll(`{{${key}}}`, `${value}`)
+  }
+  return builder
+}
+
 export class Gettext {
   #pluralFunc!: (n: number) => number
   #pluralForm!: string
@@ -33,22 +49,29 @@ export class Gettext {
     ) as (n: number) => number
   }
 
-  gettext = (msgid: string): string => {
+  gettext = <const T extends string>(msgid: T): T => {
     if (msgid in this.messages[""]) {
       const msg = this.messages[""][msgid]
-      return (Array.isArray(msg) ? msg.at(1) : msg) ?? msgid
+      return ((Array.isArray(msg) ? msg.at(1) : msg) as T) ?? msgid
     }
 
     return msgid
   }
 
-  ngettext = (msgid1: string, msgid2: string, n: number): string => {
+  ngettext = <const T1 extends string, const T2 extends string>(
+    msgid1: T1,
+    msgid2: T2,
+    n: number,
+  ): T1 | T2 => {
     const index = this.#pluralFunc(n)
-    return this.messages[""][msgid1]?.at(index) ?? (n === 1 ? msgid1 : msgid2)
+    return (
+      (this.messages[""][msgid1]?.at(index) as T1) ??
+      (n === 1 ? msgid1 : msgid2)
+    )
   }
 
-  pgettext = (msgctxt: string, msgid: string): string => {
+  pgettext = <const T extends string>(msgctxt: string, msgid: T): T => {
     const msg = this.messages[msgctxt]?.[msgid] ?? msgid
-    return (Array.isArray(msg) ? msg.at(0) : msg) ?? msgid
+    return ((Array.isArray(msg) ? msg.at(0) : msg) as T) ?? msgid
   }
 }

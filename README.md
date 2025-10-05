@@ -14,7 +14,7 @@ When iterating on a project you should not have to worry about
 Requires 0 setup to get started.
 
 ```tsx
-import { useGettext } from "gettext-simple/react"
+import { useGettext, fmt } from "gettext-simple/react"
 
 function Component() {
   const [count, setCount] = useState(0)
@@ -26,10 +26,9 @@ function Component() {
         {t("Add an apple")}
       </button>
       <p>
-        {n("There is one apple", "Number of apples: {count}", count).replace(
-          "{count}",
-          `${count}`,
-        )}
+        {fmt(n("There is one apple", "Number of apples: {{count}}"), {
+          count: count,
+        })}
       </p>
     </main>
   )

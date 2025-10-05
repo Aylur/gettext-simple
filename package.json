@@ -1,11 +1,11 @@
 {
   "name": "gettext-simple",
-  "version": "0.2.6",
+  "version": "0.3.0",
   "type": "module",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Aylur/simple-gettext.git"
+    "url": "git+https://github.com/Aylur/gettext-simple.git"
   },
   "scripts": {
     "build": "tsc"
