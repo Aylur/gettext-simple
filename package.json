@@ -44,6 +44,7 @@
     }
   },
   "prettier": {
-    "semi": false
+    "semi": false,
+    "proseWrap": "always"
   }
 }

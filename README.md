@@ -30,9 +30,8 @@ function Component() {
           count: count,
         })}
       </p>
-      {fmt(t("Click <link>here</link> for more <bold>apples</bold>"), {
+      {fmt(t("Click <link>here</link> for more)"), {
         link: (child) => <a>{child}</a>,
-        bold: (child) => <b>{child}</b>,
       })}
     </main>
   )
@@ -56,13 +55,13 @@ function Component() {
 2. Init `.po` files
 
    ```sh
-   msginit --locale=hu --input=messages.pot
+   msginit --locale=yourlocale --input=messages.pot
    ```
 
 3. After filling it in, turn it into a json file.
 
    ```sh
-   ./node_modules/.bin/gettext-simple locale.po messages.json
+   ./node_modules/.bin/gettext-simple yourlocale.po yourlocale.json
    ```
 
 4. Wrap your app in a `GettextProvider`
@@ -75,3 +74,26 @@ function Component() {
      <App />
    <GettextProvider>
    ```
+
+## Maintaining translations
+
+1. Regenerate .pot file with `xgettext` as seen above
+
+2. Merge messages
+
+   ```sh
+   for po in po/*.po; do
+     msgmerge --update --backup=off "$po" po/messages.pot
+     # optionally remove obsolete messages
+     msgattrib --no-obsolete --output-file="$po" "$po"
+   done
+   ```
+
+## Todo
+
+- [ ] add error logs for missing messages in dev mode when messages object is
+      non empty in Gettext
+- [ ] add support for Astro
+- [ ] add support for Solid
+- [ ] add support for Svelte
+- [ ] add support for Vue
