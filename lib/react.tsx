@@ -6,14 +6,48 @@ import {
   useEffect,
   useMemo,
   useState,
+  Fragment,
   type PropsWithChildren,
-  type ReactNode,
+  type JSX,
 } from "react"
-import type { PoJson } from "../po2json"
-import { Gettext } from "../gettext/react.js"
-import type { Fmt, NFmt, PFmt } from "../format"
+import type { PoJson } from "./po2json"
+import {
+  Gettext,
+  type Text,
+  type Values,
+  type AstNode,
+  format,
+} from "./gettext.js"
 
 type Messages = Partial<PoJson>
+
+function render(
+  nodes: AstNode[],
+  fns: Record<string, (s: JSX.Element) => JSX.Element>,
+) {
+  return (
+    <>
+      {nodes.map((n, i): string | JSX.Element => {
+        if (n.type === "text") {
+          return <Fragment key={i}>{n.value}</Fragment>
+        } else {
+          const content = render(n.children, fns)
+          return (
+            <Fragment key={i}>{fns[n.name]?.(content) ?? content}</Fragment>
+          )
+        }
+      })}
+    </>
+  )
+}
+
+export function fmt<const S extends string>(
+  input: Text<S>,
+  values: Values<Text<S>, JSX.Element>,
+) {
+  const { tags, nodes } = format(input, values)
+  return render(nodes, tags)
+}
 
 const GettextContext = createContext({
   gettext: new Gettext(),
@@ -47,10 +81,10 @@ export function GettextProvider(
   )
 }
 
-export type GettextReact = Fmt<ReactNode> & {
-  gettext: Fmt<ReactNode>
-  pgettext: PFmt<ReactNode>
-  ngettext: NFmt<ReactNode>
+export type GettextReact = Gettext["gettext"] & {
+  gettext: Gettext["gettext"]
+  pgettext: Gettext["pgettext"]
+  ngettext: Gettext["ngettext"]
 }
 
 type UseGettextReact = GettextReact & {

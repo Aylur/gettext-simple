@@ -1,27 +1,19 @@
 import type { Messages, PoJson } from "./po2json"
-import { parseToAst, type AstNode } from "./ast.js"
-import * as fmt from "./format.js"
 
-function renderString<I extends string>(
-  nodes: AstNode[],
-  fns: Record<string, (s: I) => I>,
-): string {
-  let result = ""
-  for (const n of nodes) {
-    if (n.type === "text") {
-      result += n.value
-    } else {
-      const content = renderString(n.children, fns)
-      result += fns[n.name]?.(content as I) ?? content
-    }
-  }
-  return result
+const { fromEntries, entries } = Object
+
+declare const slots: unique symbol
+declare const tags: unique symbol
+
+export type Text<T> = T & {
+  [slots]: TemplateStrings<T>
+  [tags]: HtmlTags<T>
 }
 
-export abstract class Gettext<El> {
+export class Gettext {
+  readonly lang: string
   private readonly messages: Messages
   private readonly pluralFunc!: (n: number) => number
-  readonly lang: string
 
   constructor({
     pluralForms = "nplurals=2; plural=(n != 1);",
@@ -30,84 +22,154 @@ export abstract class Gettext<El> {
   }: Partial<PoJson> = {}) {
     this.lang = lang
     this.messages = messages
-
     this.pluralFunc = Function(
       "n",
       "let plural, nplurals; " + pluralForms + " return Number(plural);",
     ) as (n: number) => number
   }
 
-  protected _gettext(msgid: string): string {
+  gettext = <const S extends string>(msgid: S): Text<S> => {
     if (msgid in this.messages[""]) {
       const msg = this.messages[""][msgid]
-      return (Array.isArray(msg) ? msg.at(1) : msg) ?? msgid
+      return ((Array.isArray(msg) ? msg.at(1) : msg) ?? msgid) as Text<S>
     }
 
-    return msgid
+    return msgid as Text<S>
   }
 
-  protected _ngettext(msgid1: string, msgid2: string, n: number): string {
+  ngettext = <const S1 extends string, const S2 extends string>(
+    msgid1: S1,
+    msgid2: S2,
+    n: number,
+  ): Text<S1 | S2> => {
     const index = this.pluralFunc(n)
-    return this.messages[""][msgid1]?.at(index) ?? (n === 1 ? msgid1 : msgid2)
+    return (this.messages[""][msgid1]?.at(index) ??
+      (n === 1 ? msgid1 : msgid2)) as Text<S1 | S2>
   }
 
-  protected _pgettext(msgctxt: string, msgid: string): string {
+  pgettext = <const S extends string>(msgctxt: string, msgid: S): Text<S> => {
     const msg = this.messages[msgctxt]?.[msgid] ?? msgid
-    return (Array.isArray(msg) ? msg.at(0) : msg) ?? msgid
+    return ((Array.isArray(msg) ? msg.at(0) : msg) ?? msgid) as Text<S>
+  }
+}
+
+type TemplateStrings<S> = S extends `${infer _}{{${infer K}}}${infer Rest}`
+  ? K | TemplateStrings<Rest>
+  : never
+
+type TagName<T> = T extends `/${infer N}`
+  ? TagName<N>
+  : T extends `${infer N} ${string}`
+    ? TagName<N>
+    : T extends `${infer N}/`
+      ? TagName<N>
+      : T
+
+type HtmlTags<S> = S extends `${string}<${infer T}>${infer Rest}`
+  ? TagName<T> | HtmlTags<Rest>
+  : never
+
+export type AstNode =
+  | { type: "text"; value: string }
+  | { type: "el"; name: string; children: AstNode[] }
+
+function parseToAst(input: string): AstNode[] {
+  const root: AstNode = { type: "el", name: "__root__", children: [] }
+  const stack: Array<{ name: string; children: AstNode[] }> = [root]
+
+  const tagRe = /<\s*\/?\s*([a-zA-Z0-9]+)[^>]*?>/g
+
+  let lastIdx = 0
+  let m: RegExpExecArray | null
+
+  const peek = () => stack[stack.length - 1]
+
+  const pushText = (s: string) =>
+    s && peek().children.push({ type: "text", value: s })
+
+  while ((m = tagRe.exec(input))) {
+    const full = m[0]
+    const rawName = m[1]
+    const name = rawName.toLowerCase()
+
+    pushText(input.slice(lastIdx, m.index))
+    lastIdx = m.index + full.length
+
+    const isClosing = /^<\s*\//.test(full)
+    const isSelfClosing = /\/\s*>$/.test(full)
+
+    if (isClosing) {
+      for (let i = stack.length - 1; i > 0; i--) {
+        if (stack[i].name === name) {
+          const node = stack.pop()!
+          peek().children.push({
+            type: "el",
+            name: node.name,
+            children: node.children,
+          })
+          break
+        }
+      }
+    } else if (isSelfClosing) {
+      peek().children.push({ type: "el", name, children: [] })
+    } else {
+      stack.push({ name, children: [] })
+    }
   }
 
-  #fmtFn: fmt.FmtFunction = (msgid, values?) => {
-    const text = this._gettext(msgid)
-    return values ? fmt.fstring(text, values) : text
+  // trailing text
+  pushText(input.slice(lastIdx))
+
+  // close any still-open tags
+  while (stack.length > 1) {
+    const node = stack.pop()!
+    peek().children.push({
+      type: "el",
+      name: node.name,
+      children: node.children,
+    })
   }
 
-  #fmtMarkup: fmt.FmtMarkup = (msgid, record) => {
-    const { tags, values } = fmt.get<string>(record)
-    const text = fmt.fstring(this._gettext(msgid), values)
-    return renderString(parseToAst(text), tags)
-  }
+  return root.children
+}
 
-  #nfmtFn: fmt.NFmtFuntion = (msgid1, msgid2, n, values?) => {
-    const text = this._ngettext(msgid1, msgid2, n)
-    return values ? fmt.fstring(text, values) : text
-  }
+type Prettify<T> = { [K in keyof T]: T[K] } & {}
 
-  #nfmtMarkup: fmt.NFmtMarkup = (msgid1, msgid2, n, record) => {
-    const { tags, values } = fmt.get<string>(record)
-    const text = fmt.fstring(this._ngettext(msgid1, msgid2, n), values)
-    return renderString(parseToAst(text), tags)
-  }
+export type Values<S, El> = S extends {
+  [slots]: any
+  [tags]: any
+}
+  ? [S[typeof slots], S[typeof tags]] extends [never, never]
+    ? never
+    : Prettify<
+        Record<S[typeof slots], string | number> &
+          Record<S[typeof tags], (content: El) => El>
+      >
+  : never
 
-  #pfmtFn: fmt.PFmtFunction = (msgctxt, msgid, values?) => {
-    const text = this._pgettext(msgctxt, msgid)
-    return values ? fmt.fstring(text, values) : text
-  }
+export function format<T extends string, El>(
+  input: Text<T>,
+  values: Values<Text<T>, El>,
+) {
+  const slots = fromEntries(
+    entries(values).filter(
+      (v): v is [string, string | number] =>
+        typeof v[1] === "string" || typeof v[1] === "number",
+    ),
+  )
 
-  #pfmtMarkup: fmt.PFmtMarkup = (msgctxt, msgid, record) => {
-    const { tags, values } = fmt.get<string>(record)
-    const text = fmt.fstring(this._pgettext(msgctxt, msgid), values)
-    return renderString(parseToAst(text), tags)
-  }
+  const tags = fromEntries(
+    entries(values).filter(
+      (v): v is [string, (content: El) => El] => typeof v[1] === "function",
+    ),
+  )
 
-  protected abstract fmtRich: fmt.FmtRich<El>
-  protected abstract pfmtRich: fmt.PFmtRich<El>
-  protected abstract nfmtRich: fmt.NFmtRich<El>
+  const text = input.replace(
+    /\{\{([^{}]+)\}\}/g,
+    (match, key: string) => `${slots[key] ?? match}`,
+  )
 
-  gettext: fmt.Fmt<El> = Object.assign(this.#fmtFn, {
-    raw: this._gettext.bind(this),
-    markup: this.#fmtMarkup,
-    rich: (...args: Parameters<fmt.FmtRich<El>>) => this.fmtRich(...args),
-  })
+  const nodes = parseToAst(text)
 
-  pgettext: fmt.PFmt<El> = Object.assign(this.#pfmtFn, {
-    raw: this._pgettext.bind(this),
-    markup: this.#pfmtMarkup,
-    rich: (...args: Parameters<fmt.PFmtRich<El>>) => this.pfmtRich(...args),
-  })
-
-  ngettext: fmt.NFmt<El> = Object.assign(this.#nfmtFn, {
-    raw: this._ngettext.bind(this),
-    markup: this.#nfmtMarkup,
-    rich: (...args: Parameters<fmt.NFmtRich<El>>) => this.nfmtRich(...args),
-  })
+  return { input, slots, text, tags, nodes }
 }

@@ -1,9 +1,9 @@
 import { po, type GetTextTranslation } from "gettext-parser"
 
+const { fromEntries, entries } = Object
+
 export type Messages = { [ctx: string]: Record<string, string | string[]> }
 export type PoJson = { pluralForms: string; lang: string; messages: Messages }
-
-const { fromEntries, entries } = Object
 
 function translate(translations: Record<string, GetTextTranslation>) {
   return fromEntries(

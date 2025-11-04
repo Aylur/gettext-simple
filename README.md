@@ -26,10 +26,14 @@ function Component() {
         {t("Add an apple")}
       </button>
       <p>
-        {fmt(n("There is one apple", "Number of apples: {{count}}"), {
+        {fmt(n("There is one apple", "Number of apples: {{count}}", count), {
           count: count,
         })}
       </p>
+      {fmt(t("Click <link>here</link> for more <bold>apples</bold>"), {
+        link: (child) => <a>{child}</a>,
+        bold: (child) => <b>{child}</b>,
+      })}
     </main>
   )
 }
