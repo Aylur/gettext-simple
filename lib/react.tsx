@@ -70,9 +70,18 @@ export function GettextProvider(
   const [gettext, setGettext] = useState<Gettext>(
     props.gettext ?? new Gettext(props.messages),
   )
-  const setMessages = (m: Messages) => void setGettext(new Gettext(m))
-  useEffect(() => setMessages(props.messages ?? {}), [props.messages])
-  useEffect(() => setGettext(props.gettext ?? new Gettext()), [props.gettext])
+
+  const [setMessages] = useState(
+    () => (m: Messages) => setGettext(new Gettext(m)),
+  )
+
+  useEffect(() => {
+    setGettext(
+      props.messages
+        ? new Gettext(props.messages)
+        : (props.gettext ?? new Gettext()),
+    )
+  }, [props.gettext, props.messages])
 
   return (
     <GettextContext value={{ gettext, setMessages, setGettext }}>
