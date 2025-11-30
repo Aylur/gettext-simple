@@ -1,6 +1,6 @@
 {
   "name": "gettext-simple",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "type": "module",
   "license": "MIT",
   "repository": {
@@ -34,9 +34,6 @@
     "./react": {
       "import": "./dist/react.js",
       "types": "./dist/react.d.ts"
-    },
-    "./fmt": {
-      "types": "./dist/format.d.ts"
     },
     "./po2json": {
       "import": "./dist/po2json.js",

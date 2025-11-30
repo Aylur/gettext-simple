@@ -173,3 +173,25 @@ export function format<T extends string, El>(
 
   return { input, slots, text, tags, nodes }
 }
+
+function render(
+  nodes: AstNode[],
+  fns: Record<string, (s: string) => string>,
+): string[] {
+  return nodes.map((n) => {
+    if (n.type === "text") {
+      return n.value
+    } else {
+      const content = render(n.children, fns).join("")
+      return fns[n.name]?.(content) ?? content
+    }
+  })
+}
+
+export function fmt<const S extends string>(
+  input: Text<S>,
+  values: Values<Text<S>, string>,
+) {
+  const { tags, nodes } = format(input, values)
+  return render(nodes, tags).join("")
+}
